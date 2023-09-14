@@ -9,7 +9,7 @@ class User(Base):
 
     #Columns
     id = Column(Integer, primary_key=True, index=True)
-    player_uid = Column(String(128), ForeignKey('player.playerUID'))
+    #player_uid = Column(String(128), ForeignKey('player.playerUID'))
     name = Column(String(128), unique=True, index=True)
     email = Column(String(128), unique=True, index=True)
     role = Column(String(64), unique=False, index=True)
@@ -24,7 +24,7 @@ class User(Base):
     time_updated = Column(DateTime(timezone=True), onupdate=func.now())
 
     #Relationships
-    player = relationship("Player", backref=backref("users", uselist=False))
+    #player = relationship("Player", backref=backref("users", uselist=False))
 
 
 class Server(Base):
@@ -49,7 +49,7 @@ class Game(Base):
 
     #Columns
     id = Column(Integer, primary_key=True, index=True)
-    serverId = Column("Integer", ForeignKey('servers.id'))
+    serverId = Column(Integer, ForeignKey('servers.id'))
     sprintEnabled = Column(Boolean)
     sprintUnlimitedEnabled = Column(Boolean)
     maxPlayers = Column(Integer)
@@ -90,7 +90,7 @@ class Player(Base):
     playerIp = Column(String(1200))
     team = Column(Integer)
     playerIndex = Column(Integer)
-    playerUID = Column(String(128), unique=True)
+    playerUID = Column(String(128))
     primaryColor = Column(String(64))
     playerExp = Column(Integer)
     playerRank = Column(Integer)

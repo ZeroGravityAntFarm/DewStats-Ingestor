@@ -29,24 +29,19 @@ def create_stats(db: Session, stats: str):
     db.add(game)
     db.commit()
 
-    #Iterate over players in match and create records for them if they don't already exist
+    #Iterate over players in match and create records for them. Create a new record for each game event as player records are unique. For some reason player match data is stored here in the form of team id?
     for playerData in stats["players"]:
-        #Check if player exists already
-        player = db.query(models.Player).filter(models.Player.playerUID == playerData["uid"]).first()
-        
-        if not player:
-            #Add player info
-            player = models.Player(playerName=playerData["name"],
-                                   clientName=playerData["clientName"],
-                                   serviceTag=playerData["serviceTag"],
-                                   playerIp=playerData["ip"],
-                                   team=playerData["team"],
-                                   playerIndex=playerData["playerIndex"],
-                                   playerUID=playerData["uid"],
-                                   primaryColor=playerData["primaryColor"])
+        player = models.Player(playerName=playerData["name"],
+                               clientName=playerData["clientName"],
+                               serviceTag=playerData["serviceTag"],
+                               playerIp=playerData["ip"],
+                               team=playerData["team"],
+                               playerIndex=playerData["playerIndex"],
+                               playerUID=playerData["uid"],
+                               primaryColor=playerData["primaryColor"])
             
-            db.add(player)
-            db.commit()
+        db.add(player)
+        db.commit()
 
 
         #Add player match stats
