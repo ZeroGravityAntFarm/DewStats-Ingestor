@@ -191,37 +191,37 @@ def getWinner(gameData):
     elif gameData["game"]["variantType"] == "vip":
         if gameData["game"]["teamGame"]:
             #This one gonna be fun
-            return None
+            return []
         
         else:
             #This one gonna be fun
-            return None
+            return []
     
     elif gameData["game"]["variantType"] == "koth":
         if gameData["game"]["teamGame"]:
-            return None
+            return []
         
         else:
             #Iterate over players and find max timeControllingHill
-            return None
+            return []
     
     elif gameData["game"]["variantType"] == "oddball":
         if gameData["game"]["teamGame"]:
             #Iterate over teams and find team sum max score
-            return None
+            return []
         
         else:
             #Iterate over players and find max score
-            return None
+            return []
  
     elif gameData["game"]["variantType"] == "territories":
         if gameData["game"]["teamGame"]:
             #Iterate over teams and find team sum max score
-            return None
+            return []
         
         else:
             #Iterate over players and find max score
-            return None
+            return []
         
     else:
         return ['Guardians']
