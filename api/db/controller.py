@@ -163,12 +163,16 @@ def getWinner(gameData):
                     if medal["medalName"] == "flag_captured":
                         teams[player["team"]] = medal["count"] + teams[player["team"]]
 
-        win_team = max(teams, key=teams.get)
+        if teams:
+            win_team = max(teams, key=teams.get)
 
-        win_players = []
-        for player in gameData["players"]:
-            if player["team"] == win_team:
-                win_players.append(player["uid"])
+            win_players = []
+            for player in gameData["players"]:
+                if player["team"] == win_team:
+                    win_players.append(player["uid"])
+
+        else:
+            win_players = []
 
         return win_players
 
