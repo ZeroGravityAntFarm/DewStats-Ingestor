@@ -203,11 +203,32 @@ def getWinner(gameData):
     
     elif gameData["game"]["variantType"] == "koth":
         if gameData["game"]["teamGame"]:
-            return []
+             #Find all teams in our game and sum their player hill time
+            teams = {}
+            for player in gameData["players"]:
+                if player["team"] not in teams:
+                    teams[player["team"]] = player["otherStats"]["timeControllingHill"]
+
+                else:
+                    teams[player["team"]] = player["otherStats"]["timeControllingHill"] + teams[player["team"]]
+
+            #This will return last team in loop if in case of tie
+            win_team = max(teams, key=teams.get)
+
+            win_players = []
+            for player in gameData["players"]:
+                if player["team"] == win_team:
+                    win_players.append(player["uid"])
+
+            return win_players
         
         else:
-            #Iterate over players and find max timeControllingHill
-            return []
+            time = 0
+            winner = []
+            for player in gameData["players"]:
+                if player["otherStats"]["timeControllingHill"] >= time:
+                    time = ["otherStats"]["timeControllingHill"]
+                    winner.append(player["uid"])
     
     elif gameData["game"]["variantType"] == "oddball":
         if gameData["game"]["teamGame"]:
