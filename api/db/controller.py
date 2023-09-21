@@ -194,12 +194,34 @@ def getWinner(gameData):
     
     elif gameData["game"]["variantType"] == "vip":
         if gameData["game"]["teamGame"]:
-            #This one gonna be fun
-            return []
+            teams = {}
+            for player in gameData["players"]:
+                if player["team"] not in teams:
+                    teams[player["team"]] = player["playerGameStats"]["score"]
+
+                else:
+                    teams[player["team"]] = player["playerGameStats"]["score"] + teams[player["team"]]
+
+            #This will return last team in loop if in case of tie
+            if teams:
+                win_team = max(teams, key=teams.get)
+
+            win_players = []
+            for player in gameData["players"]:
+                if player["team"] == win_team:
+                    win_players.append(player["uid"])
+
+            return win_players
         
         else:
-            #This one gonna be fun
-            return []
+            score = 0
+            winner = []
+            for player in gameData["players"]:
+                if player["playerGameStats"]["score"] >= score:
+                    score = player["playerGameStats"]["score"]
+                    winner.append(player["uid"])
+
+            return winner
     
     elif gameData["game"]["variantType"] == "koth":
         if gameData["game"]["teamGame"]:
@@ -213,7 +235,8 @@ def getWinner(gameData):
                     teams[player["team"]] = player["otherStats"]["timeControllingHill"] + teams[player["team"]]
 
             #This will return last team in loop if in case of tie
-            win_team = max(teams, key=teams.get)
+            if teams:
+                win_team = max(teams, key=teams.get)
 
             win_players = []
             for player in gameData["players"]:
@@ -232,21 +255,65 @@ def getWinner(gameData):
     
     elif gameData["game"]["variantType"] == "oddball":
         if gameData["game"]["teamGame"]:
-            #Iterate over teams and find team sum max score
-            return []
+            teams = {}
+            for player in gameData["players"]:
+                if player["team"] not in teams:
+                    teams[player["team"]] = player["playerGameStats"]["score"]
+
+                else:
+                    teams[player["team"]] = player["playerGameStats"]["score"] + teams[player["team"]]
+
+            #This will return last team in loop if in case of tie
+            if teams:
+                win_team = max(teams, key=teams.get)
+
+            win_players = []
+            for player in gameData["players"]:
+                if player["team"] == win_team:
+                    win_players.append(player["uid"])
+
+            return win_players
         
         else:
-            #Iterate over players and find max score
-            return []
+            score = 0
+            winner = []
+            for player in gameData["players"]:
+                if player["playerGameStats"]["score"] >= score:
+                    score = player["playerGameStats"]["score"]
+                    winner.append(player["uid"])
+
+            return winner
  
     elif gameData["game"]["variantType"] == "territories":
         if gameData["game"]["teamGame"]:
-            #Iterate over teams and find team sum max score
-            return []
+            teams = {}
+            for player in gameData["players"]:
+                if player["team"] not in teams:
+                    teams[player["team"]] = player["playerGameStats"]["score"]
+
+                else:
+                    teams[player["team"]] = player["playerGameStats"]["score"] + teams[player["team"]]
+
+            #This will return last team in loop if in case of tie
+            if teams:
+                win_team = max(teams, key=teams.get)
+
+            win_players = []
+            for player in gameData["players"]:
+                if player["team"] == win_team:
+                    win_players.append(player["uid"])
+
+            return win_players
         
         else:
-            #Iterate over players and find max score
-            return []
+            score = 0
+            winner = []
+            for player in gameData["players"]:
+                if player["playerGameStats"]["score"] >= score:
+                    score = player["playerGameStats"]["score"]
+                    winner.append(player["uid"])
+
+            return winner
         
     else:
         return ['Guardians']
