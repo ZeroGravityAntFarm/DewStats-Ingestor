@@ -33,27 +33,26 @@ def create_stats(db: Session, stats: str):
 
     #Iterate over players in match and create records for them. Create a new record for each game event as player records are unique. For some reason player match data is stored here in the form of team id?
     for playerData in stats["players"]:
-        if playerData["uid"] in winners:
-            player = models.Player(playerName=playerData["name"],
-                               clientName=playerData["clientName"],
-                               serviceTag=playerData["serviceTag"],
-                               playerIp=playerData["ip"],
-                               team=playerData["team"],
-                               playerIndex=playerData["playerIndex"],
-                               playerUID=playerData["uid"],
-                               primaryColor=playerData["primaryColor"],
-                               playerExp=1)
+        if winners:
+            if playerData["uid"] in winners:
+                player_exp = 1
             
+            else:
+                player_exp = None
+        
         else:
-            player = models.Player(playerName=playerData["name"],
+                player_exp = None
+        
+        player = models.Player(playerName=playerData["name"],
                                 clientName=playerData["clientName"],
                                 serviceTag=playerData["serviceTag"],
                                 playerIp=playerData["ip"],
                                 team=playerData["team"],
                                 playerIndex=playerData["playerIndex"],
                                 playerUID=playerData["uid"],
-                                primaryColor=playerData["primaryColor"])
-            
+                                primaryColor=playerData["primaryColor"],
+                                playerExp=player_exp)
+        
         db.add(player)
         db.commit()
 
@@ -250,7 +249,7 @@ def getWinner(gameData):
             winner = []
             for player in gameData["players"]:
                 if player["otherStats"]["timeControllingHill"] >= time:
-                    time = ["otherStats"]["timeControllingHill"]
+                    time = player["otherStats"]["timeControllingHill"]
                     winner.append(player["uid"])
     
     elif gameData["game"]["variantType"] == "oddball":
