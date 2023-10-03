@@ -1,11 +1,12 @@
 from sqlalchemy.orm import Session
 from db.models import models
+from openskill.models import PlackettLuce
+import logging
 
 #Create Match Stats
 def create_stats(db: Session, stats: str):
     #Check if server record exist already (Not much unique data to go by here so we filter on name and player host)
     server = db.query(models.Server).filter(models.Server.serverName == stats["serverName"]).filter(models.Server.hostPlayer == stats["hostPlayer"]).first()
-
     winners = getWinner(stats)
 
     if not server:
@@ -31,27 +32,69 @@ def create_stats(db: Session, stats: str):
     db.add(game)
     db.commit()
 
+    model = PlackettLuce()
+    teamWin = []
+    teamLoss = []
+
     #Iterate over players in match and create records for them. Create a new record for each game event as player records are unique. For some reason player match data is stored here in the form of team id?
     for playerData in stats["players"]:
+        #Get most recent player record
+        player = db.query(models.Player).filter(models.Player.playerUID == playerData["uid"]).order_by(models.Player.id.desc()).first()
+
         if winners:
             if playerData["uid"] in winners:
                 player_exp = 1
+
+                if player.playerMu and player.playerSigma:
+                    #Get players existing rating to use for our model
+                    teamWin.append(model.rating([player.playerMu, player.playerSigma], name=playerData["uid"]))
+
+                else:
+                    #player does not have a openskill rating yet
+                    teamWin.append(model.rating(name=playerData["uid"]))
+
             
             else:
                 player_exp = None
+
+                if player.playerMu and player.playerSigma:
+                    #Get players existing rating to use for our model
+                    teamWin.append(model.rating([player.playerMu, player.playerSigma], name=playerData["uid"]))
+
+                else:
+                    #player does not have a openskill rating yet
+                    teamWin.append(model.rating(name=playerData["uid"]))
         
         else:
-                player_exp = None
+            #For whatever reason there are no calculated winners we will "freeze" the players rating and award no exp
+            player_exp = None
         
-        player = models.Player(playerName=playerData["name"],
-                                clientName=playerData["clientName"],
-                                serviceTag=playerData["serviceTag"],
-                                playerIp=playerData["ip"],
-                                team=playerData["team"],
-                                playerIndex=playerData["playerIndex"],
-                                playerUID=playerData["uid"],
-                                primaryColor=playerData["primaryColor"],
-                                playerExp=player_exp)
+
+        #Copy existing rating to new player record
+        if player.playerMu and player.playerSigma:
+            player = models.Player(playerName=playerData["name"],
+                                    clientName=playerData["clientName"],
+                                    serviceTag=playerData["serviceTag"],
+                                    playerIp=playerData["ip"],
+                                    team=playerData["team"],
+                                    playerIndex=playerData["playerIndex"],
+                                    playerUID=playerData["uid"],
+                                    primaryColor=playerData["primaryColor"],
+                                    playerExp=player_exp,
+                                    playerMu = player.playerMu,
+                                    playerSigma = player.playerSigma)
+        
+        #Do not assign rating if this is a new player and no winners are found
+        else:
+            player = models.Player(playerName=playerData["name"],
+                                    clientName=playerData["clientName"],
+                                    serviceTag=playerData["serviceTag"],
+                                    playerIp=playerData["ip"],
+                                    team=playerData["team"],
+                                    playerIndex=playerData["playerIndex"],
+                                    playerUID=playerData["uid"],
+                                    primaryColor=playerData["primaryColor"],
+                                    playerExp=player_exp)
         
         db.add(player)
         db.commit()
@@ -109,6 +152,36 @@ def create_stats(db: Session, stats: str):
             
             db.add(weapon)
             db.commit()
+
+    #Update player openskill mu and sigma
+    logger = logging.getLogger("uvicorn")
+    logger.info("++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+    logger.info(teamWin)
+    logger.info(teamLoss)
+    logger.info("++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+
+    if teamWin and teamLoss:
+        match = [teamWin, teamLoss]
+        [teamWin, teamLoss] = model.rate(match)
+
+        for playerSkill in teamWin:
+            player = db.query(models.Player).filter(models.Player.playerUID == playerSkill.name)
+
+            player.playerMu = playerSkill.mu
+            player.playerSigma = playerSkill.sigma
+
+            db.add(player)
+            db.commit()
+
+        for playerSkill in teamLoss:
+            player = db.query(models.Player).filter(models.Player.playerUID == playerSkill.name)
+
+            player.playerMu = playerSkill.mu
+            player.playerSigma = playerSkill.sigma
+
+            db.add(player)
+            db.commit()
+
 
     return True
 
