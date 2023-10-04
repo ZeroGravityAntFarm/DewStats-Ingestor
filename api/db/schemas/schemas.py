@@ -58,8 +58,8 @@ class PlayerBase(BaseModel):
     primaryColor: str
     playerExp: int
     playerRank: int
-    playerMu: int
-    playerSigma: int
+    playerMu: float
+    playerSigma: float
 
 
 class PlayerGameStatsBase(BaseModel):

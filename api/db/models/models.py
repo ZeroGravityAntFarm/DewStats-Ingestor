@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, ForeignKey, Integer, BigInteger, String, LargeBinary, DateTime
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, Float, String, DateTime
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.sql import func
 from db.session import Base
@@ -94,8 +94,8 @@ class Player(Base):
     primaryColor = Column(String(64))
     playerExp = Column(Integer)
     playerRank = Column(Integer)
-    playerMu = Column(BigInteger)
-    playerSigma = Column(BigInteger)
+    playerMu = Column(Float)
+    playerSigma = Column(Float)
 
     #Automatic Created/Updated datetime columns
     time_created = Column(DateTime(timezone=True), default=func.now())

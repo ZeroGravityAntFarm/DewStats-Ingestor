@@ -40,14 +40,15 @@ def create_stats(db: Session, stats: str):
     for playerData in stats["players"]:
         #Get most recent player record
         player = db.query(models.Player).filter(models.Player.playerUID == playerData["uid"]).order_by(models.Player.id.desc()).first()
+        
 
         if winners:
             if playerData["uid"] in winners:
                 player_exp = 1
 
-                if player.playerMu and player.playerSigma:
+                if not (hasattr(player, 'playerMu') and hasattr(player, 'playerSigma')):
                     #Get players existing rating to use for our model
-                    teamWin.append(model.rating([player.playerMu, player.playerSigma], name=playerData["uid"]))
+                    teamWin.append(model.create_rating([player.playerMu, player.playerSigma], name=playerData["uid"]))
 
                 else:
                     #player does not have a openskill rating yet
@@ -56,14 +57,14 @@ def create_stats(db: Session, stats: str):
             
             else:
                 player_exp = None
-
-                if player.playerMu and player.playerSigma:
+                
+                if not (hasattr(player, 'playerMu') and hasattr(player, 'playerSigma')):
                     #Get players existing rating to use for our model
-                    teamWin.append(model.rating([player.playerMu, player.playerSigma], name=playerData["uid"]))
+                    teamLoss.append(model.create_rating([player.playerMu, player.playerSigma], name=playerData["uid"]))
 
                 else:
                     #player does not have a openskill rating yet
-                    teamWin.append(model.rating(name=playerData["uid"]))
+                    teamLoss.append(model.rating(name=playerData["uid"]))
         
         else:
             #For whatever reason there are no calculated winners we will "freeze" the players rating and award no exp
@@ -71,7 +72,7 @@ def create_stats(db: Session, stats: str):
         
 
         #Copy existing rating to new player record
-        if player.playerMu and player.playerSigma:
+        if hasattr(player, 'playerMu') and hasattr(player, 'playerSigma'):
             player = models.Player(playerName=playerData["name"],
                                     clientName=playerData["clientName"],
                                     serviceTag=playerData["serviceTag"],
@@ -84,6 +85,7 @@ def create_stats(db: Session, stats: str):
                                     playerMu = player.playerMu,
                                     playerSigma = player.playerSigma)
         
+
         #Do not assign rating if this is a new player and no winners are found
         else:
             player = models.Player(playerName=playerData["name"],
@@ -165,19 +167,23 @@ def create_stats(db: Session, stats: str):
         [teamWin, teamLoss] = model.rate(match)
 
         for playerSkill in teamWin:
-            player = db.query(models.Player).filter(models.Player.playerUID == playerSkill.name)
+            player = db.query(models.Player).filter(models.Player.playerUID == playerSkill.name).order_by(models.Player.id.desc()).first()
 
             player.playerMu = playerSkill.mu
             player.playerSigma = playerSkill.sigma
+            logger.info(playerSkill.mu)
+            logger.info(playerSkill.sigma)
 
             db.add(player)
             db.commit()
 
         for playerSkill in teamLoss:
-            player = db.query(models.Player).filter(models.Player.playerUID == playerSkill.name)
+            player = db.query(models.Player).filter(models.Player.playerUID == playerSkill.name).order_by(models.Player.id.desc()).first()
 
             player.playerMu = playerSkill.mu
             player.playerSigma = playerSkill.sigma
+            logger.info(playerSkill.mu)
+            logger.info(playerSkill.sigma)
 
             db.add(player)
             db.commit()
