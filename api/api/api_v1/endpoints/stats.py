@@ -20,7 +20,7 @@ def get_db():
 @router.post("/stats")
 async def post_stats(request: Request, db: Session = Depends(get_db)):
     match_request = await request.json()
-    stats = controller.create_stats(db, stats=match_request)
+    stats = controller.create_stats(db, stats=match_request, header=request.headers.get('User-Agent'), ip=request.client.host)
 
     if not stats:
         return HTTPException(status_code=500, detail="Failed to create stats")

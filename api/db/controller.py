@@ -2,9 +2,18 @@ from sqlalchemy.orm import Session
 from db.models import models
 from openskill.models import PlackettLuce
 import logging
+import requests
 
 #Create Match Stats
-def create_stats(db: Session, stats: str):
+def create_stats(db: Session, stats: str, header: str, ip: str):
+    logger = logging.getLogger("uvicorn")
+
+    #Validate our requesting server
+    if not validate_server(ip, header):
+        logger.info("Fake data detected from: " + str(ip))
+
+        return
+
     #Check if server record exist already (Not much unique data to go by here so we filter on name and player host)
     server = db.query(models.Server).filter(models.Server.serverName == stats["serverName"]).filter(models.Server.hostPlayer == stats["hostPlayer"]).first()
     winners = getWinner(stats)
@@ -39,40 +48,44 @@ def create_stats(db: Session, stats: str):
     #Iterate over players in match and create records for them. Create a new record for each game event as player records are unique. For some reason player match data is stored here in the form of team id?
     for playerData in stats["players"]:
         #Get most recent player record
-        player = db.query(models.Player).filter(models.Player.playerUID == playerData["uid"]).order_by(models.Player.id.desc()).first()
+        try:
+            player = db.query(models.Player).filter(models.Player.playerUID == playerData["uid"]).order_by(models.Player.id.desc()).first()
         
+        except:
+            #New player !!!!!1
+            continue
 
         if winners:
             if playerData["uid"] in winners:
                 player_exp = 1
 
-                if not (hasattr(player, 'playerMu') and hasattr(player, 'playerSigma')):
+                if player:
                     #Get players existing rating to use for our model
                     teamWin.append(model.create_rating([player.playerMu, player.playerSigma], name=playerData["uid"]))
 
                 else:
-                    #player does not have a openskill rating yet
+                    #Player does not have a openskill rating yet
                     teamWin.append(model.rating(name=playerData["uid"]))
 
             
             else:
-                player_exp = None
+                player_exp = 0
                 
-                if not (hasattr(player, 'playerMu') and hasattr(player, 'playerSigma')):
+                if player:
                     #Get players existing rating to use for our model
                     teamLoss.append(model.create_rating([player.playerMu, player.playerSigma], name=playerData["uid"]))
 
                 else:
-                    #player does not have a openskill rating yet
+                    #Player does not have a openskill rating yet
                     teamLoss.append(model.rating(name=playerData["uid"]))
         
         else:
             #For whatever reason there are no calculated winners we will "freeze" the players rating and award no exp
-            player_exp = None
+            player_exp = 0
         
 
-        #Copy existing rating to new player record
-        if hasattr(player, 'playerMu') and hasattr(player, 'playerSigma'):
+        #Create new player record
+        if player:
             player = models.Player(playerName=playerData["name"],
                                     clientName=playerData["clientName"],
                                     serviceTag=playerData["serviceTag"],
@@ -84,9 +97,7 @@ def create_stats(db: Session, stats: str):
                                     playerExp=player_exp,
                                     playerMu = player.playerMu,
                                     playerSigma = player.playerSigma)
-        
-
-        #Do not assign rating if this is a new player and no winners are found
+            
         else:
             player = models.Player(playerName=playerData["name"],
                                     clientName=playerData["clientName"],
@@ -96,7 +107,10 @@ def create_stats(db: Session, stats: str):
                                     playerIndex=playerData["playerIndex"],
                                     playerUID=playerData["uid"],
                                     primaryColor=playerData["primaryColor"],
-                                    playerExp=player_exp)
+                                    playerExp=player_exp,
+                                    playerMu = 25.0,
+                                    playerSigma = 8.333333333333334)
+
         
         db.add(player)
         db.commit()
@@ -156,12 +170,6 @@ def create_stats(db: Session, stats: str):
             db.commit()
 
     #Update player openskill mu and sigma
-    logger = logging.getLogger("uvicorn")
-    logger.info("++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-    logger.info(teamWin)
-    logger.info(teamLoss)
-    logger.info("++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-
     if teamWin and teamLoss:
         match = [teamWin, teamLoss]
         [teamWin, teamLoss] = model.rate(match)
@@ -171,8 +179,6 @@ def create_stats(db: Session, stats: str):
 
             player.playerMu = playerSkill.mu
             player.playerSigma = playerSkill.sigma
-            logger.info(playerSkill.mu)
-            logger.info(playerSkill.sigma)
 
             db.add(player)
             db.commit()
@@ -182,13 +188,48 @@ def create_stats(db: Session, stats: str):
 
             player.playerMu = playerSkill.mu
             player.playerSigma = playerSkill.sigma
-            logger.info(playerSkill.mu)
-            logger.info(playerSkill.sigma)
 
             db.add(player)
             db.commit()
 
 
+    return True
+
+
+#Validate we have a real server reporting data and not a bot
+def validate_server(hostIp, userAgent):
+    logger = logging.getLogger("uvicorn")
+    master_servers = ['http://ed.thebeerkeg.net/server/list']
+
+    for server in master_servers:
+        resp = requests.get(url=server)
+
+    master_data = resp.json()
+
+
+    if not any(hostIp in s for s in master_data["result"]["servers"]):
+        logger.info("Server not in master")
+        logger.info(master_data["result"]["servers"])
+        return False
+    
+    elif userAgent != "ElDewrito/0.6.1.0":
+        logger.info("Bad user agent: " + userAgent)
+        return False
+    
+    else:
+        for server in master_data["result"]["servers"]:
+            if hostIp in server:
+                try:
+                    dew_request = requests.get('http://' + server)
+
+                    if not dew_request:
+                        logger.info("Invalid server api response")
+                        return False
+
+                except:
+                    logger.info("Could not reach server api")
+                    return False
+        
     return True
 
 
