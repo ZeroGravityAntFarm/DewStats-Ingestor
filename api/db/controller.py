@@ -9,7 +9,7 @@ def create_stats(db: Session, stats: str, header: str, ip: str):
     logger = logging.getLogger("uvicorn")
 
     #Validate our requesting server
-    if not validate_server(ip, header):
+    if not validate_server(ip, header, serverName=stats["serverName"], serverPort=stats["serverPort"]):
         logger.info("Fake data detected from: " + str(ip))
 
         return
@@ -197,15 +197,17 @@ def create_stats(db: Session, stats: str, header: str, ip: str):
 
 
 #Validate we have a real server reporting data and not a bot
-def validate_server(hostIp, userAgent):
+def validate_server(hostIp, userAgent, serverName, serverPort):
     logger = logging.getLogger("uvicorn")
-    master_servers = ['http://ed.thebeerkeg.net/server/list']
+    master_servers = ['http://ed.thebeerkeg.net/server/list', 'http://master.zgaf.io/list']
+    sList = []
 
     for server in master_servers:
         resp = requests.get(url=server)
+        for server in resp:
+            sList.append(server)
 
     master_data = resp.json()
-
 
     if not any(hostIp in s for s in master_data["result"]["servers"]):
         logger.info("Server not in master")
@@ -220,14 +222,20 @@ def validate_server(hostIp, userAgent):
         for server in master_data["result"]["servers"]:
             if hostIp in server:
                 try:
-                    dew_request = requests.get('http://' + server)
+                    dew_request = requests.get('http://' + hostIp + ":" + str(serverPort))
+                    dew_request = dew_request.json()
 
                     if not dew_request:
-                        logger.info("Invalid server api response")
+                        logger.info("No server api response")
+                        return False
+                    
+                    elif serverName != dew_request["name"]:
+                        logger.info("Server Name Mismatch, shoud be " + serverName + " but got " + dew_request["name"])
                         return False
 
-                except:
-                    logger.info("Could not reach server api")
+                except requests.exceptions.HTTPError as err:
+                    logger.info("Server api timeout " + err)
+                    logger.info("http://" + hostIp + ":" + str(serverPort))
                     return False
         
     return True
